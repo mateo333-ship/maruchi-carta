@@ -122,11 +122,16 @@ export function ProductModal({ product, list, onSelect, onClose }: Props) {
     scrollRef.current?.scrollTo({ top: 0 });
     const strip = stripRef.current;
     const active = strip?.querySelector<HTMLElement>("[data-active=true]");
-    if (strip && active) strip.scrollTo({ left: active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2, behavior: "smooth" });
+    if (strip && active && strip.scrollWidth > strip.clientWidth + 1) strip.scrollTo({ left: active.offsetLeft - strip.clientWidth / 2 + active.clientWidth / 2, behavior: "smooth" });
   }, [product?.id]);
 
   // deslizar a izquierda / derecha sobre la ficha para pasar de producto
   const onTouchStart = (e: React.TouchEvent) => {
+    // en la tira "Más en…" el dedo sirve para desplazarla, no para cambiar de producto
+    if ((e.target as HTMLElement).closest("[data-noswipe]")) {
+      touch.current = null;
+      return;
+    }
     const t = e.touches[0];
     touch.current = { x: t.clientX, y: t.clientY };
   };
@@ -273,7 +278,11 @@ export function ProductModal({ product, list, onSelect, onClose }: Props) {
                 {siblings.length > 1 && (
                   <div className="border-t border-[#2a1a12]/8 pb-4 pt-4 lg:pb-6">
                     <p className="px-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6f5c] sm:px-6 lg:px-10">Más en {product.categoryLabel}</p>
-                    <div ref={stripRef} className="no-scrollbar mt-3 flex gap-2.5 overflow-x-auto px-5 pb-1 sm:px-6 lg:px-10">
+                    <div
+                      ref={stripRef}
+                      data-noswipe
+                      className="no-scrollbar mt-3 flex snap-x snap-proximity gap-2.5 overflow-x-auto overscroll-x-contain scroll-px-5 px-5 pb-1 sm:px-6 lg:grid lg:snap-none lg:grid-cols-[repeat(auto-fill,minmax(88px,1fr))] lg:overflow-visible lg:px-10"
+                    >
                       {siblings.map((s) => {
                         const active = s.id === product.id;
                         return (
@@ -283,7 +292,7 @@ export function ProductModal({ product, list, onSelect, onClose }: Props) {
                             data-active={active}
                             onClick={() => go(s, list.indexOf(s) >= index ? 1 : -1)}
                             aria-current={active}
-                            className={`flex w-[92px] shrink-0 flex-col items-center gap-1 rounded-2xl border p-2 text-center transition ${
+                            className={`flex w-[92px] shrink-0 snap-start flex-col items-center gap-1 rounded-2xl border p-2 text-center transition lg:w-auto ${
                               active ? "border-[#2a1a12] bg-[#2a1a12] text-[#f5ede0]" : "border-[#e6d6bf] bg-white/60 text-[#2a1a12] hover:border-[#2a1a12]/40"
                             }`}
                           >
