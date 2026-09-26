@@ -348,3 +348,8 @@ body::before {
 @media (hover: none) {
   .cardContainer:hover::before { transform: none; }
 }
+
+/* rendimiento en móvil: sin capa de grano fija (obliga a repintar toda la pantalla al hacer scroll) */
+@media (max-width: 767px), (pointer: coarse) {
+  body::before { display: none; }
+}

@@ -124,7 +124,49 @@ function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
   );
 }
 
-export function WeatherCard({ data, error, onClick, hint }: { data: WeatherData | null; error: boolean; onClick?: () => void; hint?: string }) {
+export function WeatherCard({
+  data,
+  error,
+  onClick,
+  hint,
+  compact = false,
+}: {
+  data: WeatherData | null;
+  error: boolean;
+  onClick?: () => void;
+  hint?: string;
+  compact?: boolean;
+}) {
+  // versión compacta para móvil: una sola franja con toda la información
+  if (compact) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full items-center gap-3 rounded-2xl bg-[#2a1a12] px-4 py-3 text-left text-[#f5ede0] shadow-[0_14px_28px_-20px_rgba(42,26,18,.8)]"
+        aria-label={data ? `${SITE.city}: ${data.temp} grados, ${describeWeather(data.code)}` : `Tiempo en ${SITE.city}`}
+      >
+        <span className="shrink-0 [&_svg]:h-9 [&_svg]:w-9">
+          <WeatherIcon code={data?.code ?? 0} isDay={data?.isDay ?? true} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[11px] font-bold tracking-[0.14em]">{SITE.city.toUpperCase()}</span>
+          <span className="block truncate text-[11px] tracking-[0.08em] text-[#d6c8ba]">
+            {data ? describeWeather(data.code) : error ? "Tiempo no disponible" : "Cargando…"}
+          </span>
+        </span>
+        {data && (
+          <span className="flex shrink-0 items-center gap-3">
+            <span className="font-display text-[28px] leading-none">{data.temp}°</span>
+            <span className="border-l border-white/25 pl-3 text-[11px] leading-tight text-[#d6c8ba]">
+              <span className="block">Máx {data.max}°</span>
+              <span className="block">Mín {data.min}°</span>
+            </span>
+          </span>
+        )}
+      </button>
+    );
+  }
   return (
     <div className="cardContainer">
       <button

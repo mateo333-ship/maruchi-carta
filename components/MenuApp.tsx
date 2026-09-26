@@ -155,7 +155,7 @@ export default function MenuApp() {
       <header ref={heroRef} className="relative overflow-hidden">
         <div className="mx-auto flex max-w-[1320px] items-center justify-between px-5 pt-5 md:px-10 md:pt-6">
           <a href="#" aria-label="Maruchi, inicio" className="block">
-            <Logo className="h-14 w-auto text-[#2a1a12] md:h-16" />
+            <Logo className="h-12 w-auto text-[#2a1a12] sm:h-14 md:h-16" />
           </a>
           <div className="flex items-center gap-5 text-[13px] font-medium text-[#6d5645]">
             <a href="#carta" className="hidden transition hover:text-[#2a1a12] sm:inline">La carta</a>
@@ -165,16 +165,16 @@ export default function MenuApp() {
           </div>
         </div>
 
-        <div className="mx-auto grid max-w-[1320px] items-center gap-6 px-5 pb-10 pt-8 md:grid-cols-[1.05fr_1fr] md:px-10 md:pb-20 md:pt-10">
+        <div className="mx-auto grid max-w-[1320px] items-center gap-5 px-5 pb-8 pt-5 sm:gap-6 sm:pb-10 sm:pt-8 md:grid-cols-[1.05fr_1fr] md:px-10 md:pb-20 md:pt-10">
           <motion.div style={{ y: heroY, opacity: heroFade }} className="relative z-10 order-2 md:order-1">
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-[12px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
               Coffee &amp; Tea · {SITE.city}
             </motion.p>
-            <h1 className="mt-10 font-display md:mt-12 uppercase leading-[0.9] tracking-[-0.02em] text-[#2a1a12]">
+            <h1 className="mt-6 font-display sm:mt-10 md:mt-12 uppercase leading-[0.9] tracking-[-0.02em] text-[#2a1a12]">
               {["Café,", "matcha", "& tostadas"].map((w, i) => (
                 <motion.span
                   key={w}
-                  className="block whitespace-nowrap text-[clamp(34px,11vw,56px)] md:text-[clamp(56px,7.2vw,108px)]"
+                  className="block whitespace-nowrap text-[clamp(30px,10vw,56px)] md:text-[clamp(56px,7.2vw,108px)]"
                   initial={{ opacity: 0, y: 60, rotateX: -70 }}
                   animate={{ opacity: 1, y: 0, rotateX: 0 }}
                   transition={{ delay: 0.1 + i * 0.12, type: "spring", stiffness: 120, damping: 16 }}
@@ -184,11 +184,11 @@ export default function MenuApp() {
                 </motion.span>
               ))}
             </h1>
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-5 max-w-[460px] font-serif text-[20px] italic md:mt-6 md:text-[24px] leading-snug text-[#5a3522]">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-4 max-w-[460px] font-serif text-[18px] italic sm:mt-5 sm:text-[20px] md:mt-6 md:text-[24px] leading-snug text-[#5a3522]">
               Sin horarios. Toca cualquier producto de la carta y míralo prepararse delante de ti.
             </motion.p>
 
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4 md:mt-8">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 md:mt-8">
               <a href="#carta" className="group inline-flex items-center gap-3 rounded-full bg-[#2a1a12] py-3 pl-6 pr-3 text-[15px] font-semibold text-[#f5ede0] shadow-[0_18px_30px_-16px_rgba(42,26,18,.7)] transition hover:gap-4">
                 Ver la carta
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-2)] text-[#2a1a12] transition group-hover:translate-y-0.5">↓</span>
@@ -196,19 +196,25 @@ export default function MenuApp() {
               <SeasonToggle winter={winter} onChange={setWinter} />
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }} className="mt-8 flex items-center gap-4 sm:gap-6 md:mt-10">
-              <WeatherCard data={weather} error={weatherError} hint={recommendation?.product ? `Toca para ver ${recommendation.product.name}` : undefined} onClick={() => recommendation?.product && setOpenId(recommendation.product.id)} />
-              <div className="min-w-0 max-w-[260px] flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6f5c]">El tiempo ahora</p>
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }} className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center sm:gap-6 md:mt-10">
+              {/* móvil: tarjeta compacta · tablet/escritorio: tarjeta Uiverse */}
+              <div className="sm:hidden">
+                <WeatherCard compact data={weather} error={weatherError} onClick={() => recommendation?.product && setOpenId(recommendation.product.id)} />
+              </div>
+              <div className="hidden sm:block">
+                <WeatherCard data={weather} error={weatherError} hint={recommendation?.product ? `Toca para ver ${recommendation.product.name}` : undefined} onClick={() => recommendation?.product && setOpenId(recommendation.product.id)} />
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:block sm:max-w-[260px] sm:flex-1">
+                <p className="hidden text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6f5c] sm:block">El tiempo ahora</p>
                 {recommendation?.product ? (
                   <>
-                    <p className="mt-2 font-serif text-[18px] italic leading-snug text-[#3d2519] sm:text-[20px]">{recommendation.text}</p>
-                    <button type="button" onClick={() => setOpenId(recommendation.product!.id)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-110">
+                    <p className="font-serif text-[17px] italic leading-snug text-[#3d2519] sm:mt-2 sm:text-[20px]">{recommendation.text}</p>
+                    <button type="button" onClick={() => setOpenId(recommendation.product!.id)} className="inline-flex sm:mt-3 items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-110">
                       {recommendation.product.name} →
                     </button>
                   </>
                 ) : (
-                  <p className="mt-2 font-serif text-[20px] italic leading-snug text-[#3d2519]">{weatherError ? "Sea el tiempo que sea, hay un café esperándote." : `Consultando el cielo de ${SITE.city}…`}</p>
+                  <p className="font-serif text-[17px] italic leading-snug text-[#3d2519] sm:mt-2 sm:text-[20px]">{weatherError ? "Sea el tiempo que sea, hay un café esperándote." : `Consultando el cielo de ${SITE.city}…`}</p>
                 )}
               </div>
             </motion.div>
@@ -219,7 +225,7 @@ export default function MenuApp() {
             initial={{ opacity: 0, scale: 0.92, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 90, damping: 18 }}
-            className="relative order-1 mx-auto aspect-[1/1] w-full max-w-[400px] sm:aspect-[4/5] md:order-2 md:max-w-[520px]"
+            className="relative order-1 mx-auto aspect-[6/5] w-full max-w-[380px] sm:aspect-[4/5] sm:max-w-[400px] md:order-2 md:max-w-[520px]"
           >
             <div className="absolute inset-0 rounded-t-[999px] rounded-b-[40px] bg-[var(--accent)] shadow-[inset_0_-40px_80px_rgba(0,0,0,.18)] transition-colors duration-700" />
             <div className="absolute inset-[14px] rounded-t-[999px] rounded-b-[30px] border-2 border-dashed border-white/25" />
@@ -270,7 +276,7 @@ export default function MenuApp() {
       </header>
 
       {/* ───────── BARRA FIJA ───────── */}
-      <div id="carta" className="sticky top-0 z-40 border-b border-[#2a1a12]/10 bg-[color-mix(in_oklab,var(--bg)_86%,transparent)] backdrop-blur-xl transition-colors duration-700">
+      <div id="carta" className="sticky top-0 z-40 border-b border-[#2a1a12]/10 bg-[var(--bg)] transition-colors duration-700 md:bg-[color-mix(in_oklab,var(--bg)_86%,transparent)] md:backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1320px] items-center gap-2 px-3 py-2.5 md:gap-5 md:px-10 md:py-3">
           {/* categorías (en móvil y tablet se ocultan mientras buscas) */}
           <div
@@ -316,10 +322,10 @@ export default function MenuApp() {
       </div>
 
       {/* ───────── CARTA ───────── */}
-      <main className="mx-auto max-w-[1320px] px-5 pb-24 pt-10 md:px-10">
+      <main className="mx-auto max-w-[1320px] px-4 pb-16 pt-6 sm:px-5 sm:pb-24 sm:pt-10 md:px-10">
         <AnimatePresence mode="wait">
           <motion.div key={season} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
-            <p className="font-serif text-[22px] italic text-[#5a3522]">
+            <p className="font-serif text-[17px] italic text-[#5a3522] sm:text-[22px]">
               {winter ? "Carta de invierno" : "Carta de verano"} · {totalVisible} {totalVisible === 1 ? "producto" : "productos"}
               {query && <> para “{query}”</>}
             </p>
@@ -340,8 +346,8 @@ export default function MenuApp() {
           c.products.length === 0 ? (
             <div key={c.id} id={`cat-${c.id}`} className="section-anchor" />
           ) : (
-            <section key={c.id} id={`cat-${c.id}`} className="section-anchor pt-14 md:pt-20" aria-labelledby={`t-${c.id}`}>
-              <div className="mb-8 grid items-end gap-4 border-b border-[#2a1a12]/12 pb-6 md:grid-cols-[auto_1fr_auto]">
+            <section key={c.id} id={`cat-${c.id}`} className="section-anchor pt-9 sm:pt-14 md:pt-20" aria-labelledby={`t-${c.id}`}>
+              <div className="mb-4 grid grid-cols-[auto_1fr] items-end gap-x-3 gap-y-1.5 border-b border-[#2a1a12]/12 pb-4 sm:mb-8 sm:gap-4 sm:pb-6 md:grid-cols-[auto_1fr_auto]">
                 <span className="font-display text-[15px] text-[var(--accent)]">{String(ci + 1).padStart(2, "0")}</span>
                 <motion.h2
                   id={`t-${c.id}`}
@@ -349,13 +355,13 @@ export default function MenuApp() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "-80px" }}
                   transition={{ type: "spring", stiffness: 120, damping: 18 }}
-                  className="font-display text-[clamp(44px,7vw,92px)] uppercase leading-[0.85] tracking-[-0.02em]"
+                  className="font-display text-[clamp(30px,9vw,92px)] uppercase leading-[0.88] tracking-[-0.02em] sm:text-[clamp(44px,7vw,92px)]"
                 >
                   {c.title}
                 </motion.h2>
-                <p className="max-w-[320px] font-serif text-[19px] italic leading-snug text-[#6d5645] md:text-right">{c.intro}</p>
+                <p className="col-span-2 max-w-[320px] font-serif text-[15.5px] italic leading-snug text-[#6d5645] sm:text-[19px] md:col-span-1 md:text-right">{c.intro}</p>
               </div>
-              <motion.ul layout className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
+              <motion.ul layout className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
                 <AnimatePresence initial={false}>
                   {c.products.map((p, i) => (
                     <ProductCard key={p.id} product={p} index={i} onOpen={() => setOpenId(p.id)} />
@@ -399,12 +405,7 @@ export default function MenuApp() {
         </div>
       </footer>
 
-      <ProductModal
-        product={openProduct}
-        onClose={() => setOpenId(null)}
-        onPrev={openIndex > 0 ? () => setOpenId(flat[openIndex - 1].id) : undefined}
-        onNext={openIndex >= 0 && openIndex < flat.length - 1 ? () => setOpenId(flat[openIndex + 1].id) : undefined}
-      />
+      <ProductModal product={openProduct} list={flat} onSelect={setOpenId} onClose={() => setOpenId(null)} />
     </>
   );
 }
