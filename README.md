@@ -33,3 +33,9 @@ Usa **Open-Meteo** (gratuito, sin API key) con las coordenadas de `data/site.ts`
 - Buscador: Uiverse (uiverse-astronaut) — atajo ⌘K / Ctrl+K / "/"
 - Toggle verano/invierno: Uiverse (mobinkakei)
 - Tarjeta del tiempo: Uiverse (vinodjangid07)
+
+## Chatbot "Maru" (Gemini)
+- Widget: `public/maruchi-chat.js` (se carga en `app/layout.tsx` con `next/script`).
+- Servidor: `app/api/chat/route.ts` → responde en `/api/chat`. En Next.js las funciones van aquí (una carpeta `api/` suelta en la raíz no se ejecutaría).
+- La carta del bot se genera sola desde `data/menu.ts`: si cambias un precio en la web, el bot lo sabe.
+- La API key va SOLO en Vercel: Settings → Environment Variables → `GEMINI_API_KEY` (y opcional `GEMINI_MODEL`).

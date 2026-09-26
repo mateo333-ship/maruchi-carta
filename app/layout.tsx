@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 // Fuentes autoalojadas (no dependen de Google Fonts en el build)
 import "@fontsource/bowlby-one/400.css";
 import "@fontsource-variable/inter";
@@ -27,7 +28,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body data-season="summer">{children}</body>
+      <body data-season="summer">
+        {children}
+        {/* Chatbot "Maru" (widget en /public/maruchi-chat.js, responde vía /api/chat) */}
+        <Script src="/maruchi-chat.js" strategy="afterInteractive" />
+      </body>
     </html>
   );
 }

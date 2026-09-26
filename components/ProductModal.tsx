@@ -152,6 +152,7 @@ export function ProductModal({ product, list, onSelect, onClose }: Props) {
     <AnimatePresence>
       {product && (
         <motion.div
+          data-product-modal
           className="fixed inset-0 z-50 flex items-end justify-center lg:items-center lg:p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
