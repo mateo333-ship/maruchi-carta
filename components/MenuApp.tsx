@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion, useScroll, useTransform } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { GooeyNav } from "@/components/ui/gooey-nav";
 import { SearchBar } from "./SearchBar";
 import { SeasonToggle } from "./SeasonToggle";
@@ -145,9 +145,6 @@ export default function MenuApp() {
   }, [weather, season]);
 
   const heroRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, 140]);
-  const heroFade = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
     <>
@@ -166,7 +163,7 @@ export default function MenuApp() {
         </div>
 
         <div className="mx-auto grid max-w-[1320px] items-center gap-5 px-5 pb-8 pt-5 sm:gap-6 sm:pb-10 sm:pt-8 md:grid-cols-[1.05fr_1fr] md:px-10 md:pb-20 md:pt-10">
-          <motion.div style={{ y: heroY, opacity: heroFade }} className="relative z-10 order-2 md:order-1">
+          <div className="relative z-10 order-2 md:order-1">
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-[12px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
               Coffee &amp; Tea · {SITE.city}
             </motion.p>
@@ -204,12 +201,12 @@ export default function MenuApp() {
               <div className="hidden sm:block">
                 <WeatherCard data={weather} error={weatherError} hint={recommendation?.product ? `Toca para ver ${recommendation.product.name}` : undefined} onClick={() => recommendation?.product && setOpenId(recommendation.product.id)} />
               </div>
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 sm:block sm:max-w-[260px] sm:flex-1">
+              <div className="flex min-w-0 items-center justify-between gap-3 px-1 sm:block sm:max-w-[260px] sm:flex-1 sm:px-0">
                 <p className="hidden text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6f5c] sm:block">El tiempo ahora</p>
                 {recommendation?.product ? (
                   <>
-                    <p className="font-serif text-[17px] italic leading-snug text-[#3d2519] sm:mt-2 sm:text-[20px]">{recommendation.text}</p>
-                    <button type="button" onClick={() => setOpenId(recommendation.product!.id)} className="inline-flex sm:mt-3 items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-110">
+                    <p className="min-w-0 font-serif text-[16px] italic leading-snug text-[#3d2519] sm:mt-2 sm:text-[20px]">{recommendation.text}</p>
+                    <button type="button" onClick={() => setOpenId(recommendation.product!.id)} className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-110 sm:mt-3">
                       {recommendation.product.name} →
                     </button>
                   </>
@@ -218,7 +215,7 @@ export default function MenuApp() {
                 )}
               </div>
             </motion.div>
-          </motion.div>
+          </div>
 
           {/* ventana-arco con la escena 3D */}
           <motion.div
