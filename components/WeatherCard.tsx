@@ -130,41 +130,52 @@ export function WeatherCard({
   onClick,
   hint,
   compact = false,
+  recommendation,
 }: {
   data: WeatherData | null;
   error: boolean;
   onClick?: () => void;
   hint?: string;
   compact?: boolean;
+  recommendation?: { text: string; name: string } | null;
 }) {
-  // versión compacta para móvil: una sola franja con toda la información
+  // versión compacta para móvil: tiempo + recomendación en una sola tarjeta
   if (compact) {
     return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex w-full items-center gap-3 rounded-2xl bg-[#2a1a12] px-4 py-3 text-left text-[#f5ede0] shadow-[0_14px_28px_-20px_rgba(42,26,18,.8)]"
-        aria-label={data ? `${SITE.city}: ${data.temp} grados, ${describeWeather(data.code)}` : `Tiempo en ${SITE.city}`}
-      >
-        <span className="shrink-0 [&_svg]:h-9 [&_svg]:w-9">
-          <WeatherIcon code={data?.code ?? 0} isDay={data?.isDay ?? true} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[11px] font-bold tracking-[0.14em]">{SITE.city.toUpperCase()}</span>
-          <span className="block truncate text-[11px] tracking-[0.08em] text-[#d6c8ba]">
-            {data ? describeWeather(data.code) : error ? "Tiempo no disponible" : "Cargando…"}
+      <div className="overflow-hidden rounded-[20px] bg-[#2a1a12] text-[#f5ede0] shadow-[0_18px_34px_-24px_rgba(42,26,18,.9)]">
+        <div className="flex items-center gap-3 px-4 py-3.5" aria-label={data ? `${SITE.city}: ${data.temp} grados, ${describeWeather(data.code)}` : `Tiempo en ${SITE.city}`}>
+          <span className="shrink-0 [&_svg]:h-9 [&_svg]:w-9">
+            <WeatherIcon code={data?.code ?? 0} isDay={data?.isDay ?? true} />
           </span>
-        </span>
-        {data && (
-          <span className="flex shrink-0 items-center gap-3">
-            <span className="font-display text-[28px] leading-none">{data.temp}°</span>
-            <span className="border-l border-white/25 pl-3 text-[11px] leading-tight text-[#d6c8ba]">
-              <span className="block">Máx {data.max}°</span>
-              <span className="block">Mín {data.min}°</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[10.5px] font-semibold uppercase tracking-[0.16em] text-[#d6c8ba]">{SITE.city}</span>
+            <span className="block truncate text-[14px] font-medium">
+              {data ? describeWeather(data.code) : error ? "Tiempo no disponible" : "Cargando…"}
             </span>
           </span>
+          {data && (
+            <span className="flex shrink-0 items-center gap-3">
+              <span className="font-display text-[30px] leading-none">{data.temp}°</span>
+              <span className="border-l border-white/20 pl-3 text-[11px] leading-tight text-[#d6c8ba]">
+                <span className="block">Máx {data.max}°</span>
+                <span className="block">Mín {data.min}°</span>
+              </span>
+            </span>
+          )}
+        </div>
+        {recommendation && (
+          <button
+            type="button"
+            onClick={onClick}
+            className="flex w-full items-center justify-between gap-3 border-t border-white/10 px-4 py-3 text-left transition active:bg-white/5"
+          >
+            <span className="min-w-0 font-serif text-[16px] italic leading-snug text-[#e9dccb]">{recommendation.text}</span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--accent)] px-3.5 py-2 text-[12.5px] font-semibold text-white">
+              {recommendation.name} →
+            </span>
+          </button>
         )}
-      </button>
+      </div>
     );
   }
   return (

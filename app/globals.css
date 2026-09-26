@@ -329,7 +329,7 @@ body::before {
   from { transform: translateX(0); }
   to { transform: translateX(-100%); }
 }
-.marquee { animation: marquee 32s linear infinite; }
+.marquee { animation: marquee 60s linear infinite; }
 
 @media (max-width: 1023px) {
   .cir-search__kbd--desktop { display: none; }
