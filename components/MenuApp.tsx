@@ -7,6 +7,7 @@ import { GooeyNav } from "@/components/ui/gooey-nav";
 import { SearchBar } from "./SearchBar";
 import { SeasonToggle } from "./SeasonToggle";
 import { Logo } from "./Logo";
+import { ConnectSection, IconCamera, IconCard, IconStar } from "./ConnectLinks";
 import { WeatherCard, describeWeather, useWeather } from "./WeatherCard";
 import { ProductCard } from "./ProductCard";
 import { ProductModal } from "./ProductModal";
@@ -154,8 +155,20 @@ export default function MenuApp() {
           <a href="#" aria-label="Maruchi, inicio" className="block">
             <Logo className="h-12 w-auto text-[#2a1a12] sm:h-14 md:h-16" />
           </a>
-          <div className="flex items-center gap-5 text-[13px] font-medium text-[#6d5645]">
+          <div className="flex items-center gap-2.5 text-[13px] font-medium text-[#6d5645] sm:gap-5">
             <a href="#carta" className="hidden transition hover:text-[#2a1a12] sm:inline">La carta</a>
+            <a href={SITE.loyaltyUrl} target="_blank" rel="noopener noreferrer" className="hidden items-center gap-1.5 transition hover:text-[#2a1a12] md:inline-flex">
+              <IconCard size={16} /> Tarjeta de fidelidad
+            </a>
+            <a
+              href={SITE.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Instagram ${SITE.instagramHandle}`}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2a1a12]/15 text-[#2a1a12] transition hover:bg-[#2a1a12] hover:text-[#f5ede0]"
+            >
+              <IconCamera size={18} />
+            </a>
             <a href={SITE.mapsUrl} target="_blank" rel="noreferrer" className="rounded-full border border-[#2a1a12]/15 px-4 py-2 transition hover:bg-[#2a1a12] hover:text-[#f5ede0]">
               Cómo llegar
             </a>
@@ -370,6 +383,9 @@ export default function MenuApp() {
         )}
       </main>
 
+      {/* ───────── INSTAGRAM · FIDELIDAD · RESEÑAS ───────── */}
+      <ConnectSection />
+
       {/* ───────── FOOTER ───────── */}
       <footer className="relative overflow-hidden bg-[#2a1a12] text-[#f5ede0]">
         <div className="mx-auto grid max-w-[1320px] gap-10 px-5 pb-10 pt-14 sm:grid-cols-2 md:px-10 md:pt-20 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
@@ -382,6 +398,23 @@ export default function MenuApp() {
             <a href={SITE.mapsUrl} target="_blank" rel="noreferrer" className="mt-4 inline-block border-b border-[#f5ede0]/40 pb-0.5 text-sm transition hover:border-[#f5ede0]">
               Abrir en Google Maps →
             </a>
+            <ul className="mt-6 space-y-2.5 text-sm text-[#f5ede0]/80">
+              <li>
+                <a href={SITE.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 transition hover:text-[#f5ede0]">
+                  <IconCamera size={17} /> {SITE.instagramHandle}
+                </a>
+              </li>
+              <li>
+                <a href={SITE.loyaltyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 transition hover:text-[#f5ede0]">
+                  <IconCard size={17} /> Tarjeta de fidelidad
+                </a>
+              </li>
+              <li>
+                <a href={SITE.reviewUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 transition hover:text-[#f5ede0]">
+                  <IconStar size={17} /> Déjanos una reseña
+                </a>
+              </li>
+            </ul>
           </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-2)]">La carta</p>
