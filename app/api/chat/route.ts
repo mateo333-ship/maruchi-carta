@@ -9,19 +9,6 @@ import { EXTRA } from "@/data/chat-extra";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-/**
- * Cadena de modelos: si uno está saturado (503), sin cuota (429) o no existe (404),
- * se pasa al siguiente. Cada modelo tiene su propia cuota gratuita, así el chat
- * casi nunca se queda sin responder.
- */
-const MODELOS = Array.from(
-  new Set(
-    [process.env.GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-flash-latest"].filter(
-      Boolean,
-    ) as string[],
-  ),
-);
-
 /* ───────────────────────── CONOCIMIENTO ───────────────────────── */
 
 const TODOS = MENU.flatMap((c) => c.products.map((p) => ({ ...p, cat: c.title })));
@@ -106,77 +93,157 @@ CARTA COMPLETA (con toda la información de cada producto)
 ${CARTA}`;
 }
 
-/* ───────────────────────── GEMINI ───────────────────────── */
+/* ───────────────────────── GEMINI: ROTACIÓN AUTOMÁTICA DE MODELOS ─────────────────────────
+   En el plan gratuito cada modelo tiene su propio límite (p. ej. 5 preguntas/minuto y 20/día).
+   Para que el chat no se quede mudo:
+   1. Se pregunta a Google qué modelos de texto hay disponibles para tu clave (se guarda 1 hora).
+   2. Las preguntas se reparten por turnos entre los modelos (así se suman sus límites).
+   3. Si un modelo se agota (429), se "aparca" el tiempo que diga Google (1 min, o hasta mañana
+      si es el límite diario) y se pasa al siguiente al instante. Y así todo el rato.
+   Opcional: GEMINI_MODEL en Vercel para que un modelo concreto vaya siempre primero. */
 
 type GeminiContent = { role: "user" | "model"; parts: { text: string }[] };
 
 // Textos de error del propio chat: no se reenvían a Gemini para no ensuciar la conversación
-const TEXTOS_DE_ERROR = [/no he podido responder/i, /mucha gente preguntando/i, /se me ha cortado la conexión/i, /no hay conexión/i, /no puedo responder/i];
+const TEXTOS_DE_ERROR = [/no he podido responder/i, /mucha gente preguntando/i, /se me ha cortado la conexión/i, /no hay conexión/i, /no puedo responder/i, /santo al cielo/i, /me he quedado sin voz/i];
+
+const API = process.env.GEMINI_API_BASE || "https://generativelanguage.googleapis.com/v1beta"; // la variable solo se usa para pruebas
+const RESERVA = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-flash-latest"];
+const EXCLUIR = /image|tts|audio|live|embed|robotic|omni|veo|lyria|imagen|computer|native|aqa|learnlm|thinking|deep-research|nano|banana/i;
+
+let catalogo: { modelos: string[]; hasta: number } | null = null;
+const aparcado = new Map<string, number>(); // modelo → timestamp hasta el que no se usa
+let turno = 0;
+
+/** Prioridad: lite primero (más cuota), luego flash, luego pro, y Gemma como último recurso. */
+function peso(m: string) {
+  if (/^gemma/.test(m)) return 50;
+  if (/flash-lite/.test(m)) return 10;
+  if (/flash/.test(m)) return 20;
+  if (/pro/.test(m)) return 40;
+  return 30;
+}
+
+async function listaModelos(): Promise<string[]> {
+  if (catalogo && catalogo.hasta > Date.now()) return catalogo.modelos;
+  let modelos: string[] = [];
+  try {
+    const r = await fetch(`${API}/models?pageSize=200`, {
+      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY as string },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.ok) {
+      const d = await r.json();
+      modelos = (d.models || [])
+        .filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes("generateContent"))
+        .map((m: { name: string }) => m.name.replace(/^models\//, ""))
+        .filter((n: string) => (/^gemini-/.test(n) || /^gemma-\d+.*-it$/.test(n)) && !EXCLUIR.test(n))
+        // Gemma: solo los grandes (los pequeños responden peor)
+        .filter((n: string) => !/^gemma/.test(n) || /(12|26|27|31)b/.test(n));
+    } else {
+      console.error("No se pudo listar modelos:", r.status);
+    }
+  } catch (e) {
+    console.error("No se pudo listar modelos:", e);
+  }
+  if (!modelos.length) modelos = RESERVA;
+  modelos = Array.from(new Set(modelos)).sort((a, b) => peso(a) - peso(b) || b.localeCompare(a, undefined, { numeric: true }));
+  if (process.env.GEMINI_MODEL) modelos = [process.env.GEMINI_MODEL, ...modelos.filter((m) => m !== process.env.GEMINI_MODEL)];
+  catalogo = { modelos, hasta: Date.now() + 60 * 60 * 1000 };
+  return modelos;
+}
+
+/** Orden de esta pregunta: se reparte por turnos dentro del grupo principal (flash / flash-lite). */
+function ordenParaEstaPregunta(modelos: string[]) {
+  const ahora = Date.now();
+  const libres = modelos.filter((m) => (aparcado.get(m) ?? 0) <= ahora);
+  const principales = libres.filter((m) => peso(m) <= 20);
+  const resto = libres.filter((m) => peso(m) > 20);
+  turno = (turno + 1) % Math.max(1, principales.length);
+  const rotados = [...principales.slice(turno), ...principales.slice(0, turno)];
+  const orden = [...rotados, ...resto];
+  // si todo está aparcado, prueba igualmente el que antes se libera
+  if (!orden.length) return [...modelos].sort((a, b) => (aparcado.get(a) ?? 0) - (aparcado.get(b) ?? 0)).slice(0, 2);
+  return orden;
+}
+
+/** Cuánto tiempo aparcar un modelo según lo que diga Google. */
+function tiempoDeAparcado(estado: number, data: unknown) {
+  const txt = JSON.stringify(data ?? "");
+  if (estado === 404 || (estado === 400 && /not found|not supported|no longer available|not available/i.test(txt))) return 24 * 3600e3;
+  if (estado === 429) {
+    if (/per ?day|perday|daily|RequestsPerDay/i.test(txt)) {
+      // hasta la medianoche del Pacífico, que es cuando Google reinicia el límite diario
+      const ahora = new Date();
+      const pacifico = new Date(ahora.toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+      const falta = (24 - pacifico.getHours()) * 3600e3 - pacifico.getMinutes() * 60e3;
+      return Math.max(15 * 60e3, falta);
+    }
+    const m = txt.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+    return Math.max(10e3, (m ? Number(m[1]) : 60) * 1000);
+  }
+  if (estado >= 500) return 20e3;
+  return 0;
+}
 
 async function llamarGemini(modelo: string, contents: GeminiContent[], systemText: string) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
+  const esGemma = /^gemma/.test(modelo);
   const generationConfig: Record<string, unknown> = { temperature: 0.8, topP: 0.95, maxOutputTokens: 2048 };
-  // En los modelos 2.5 flash el "pensamiento" gasta tokens y tiempo: aquí no hace falta
   if (/2\.5-flash/.test(modelo)) generationConfig.thinkingConfig = { thinkingBudget: 0 };
-  return fetch(url, {
+  // Gemma no admite "systemInstruction": las instrucciones van delante del primer mensaje
+  const body: Record<string, unknown> = { contents, generationConfig };
+  if (esGemma) {
+    const copia = contents.map((c) => ({ role: c.role, parts: [{ text: c.parts[0].text }] }));
+    copia[0].parts[0].text = `${systemText}\n\n---\nMensaje del cliente:\n${copia[0].parts[0].text}`;
+    body.contents = copia;
+  } else {
+    body.systemInstruction = { parts: [{ text: systemText }] };
+  }
+  return fetch(`${API}/models/${modelo}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY as string },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemText }] },
-      contents,
-      generationConfig,
-      safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
-      ],
-    }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(20000),
   });
 }
 
-const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-/** Prueba la cadena de modelos con un reintento en errores temporales. */
+/** Recorre los modelos hasta que uno responda. */
 async function responder(contents: GeminiContent[]) {
   const systemText = instrucciones();
-  let ultimoEstado = 0;
-  let cuotaDiaria = false;
-  for (const modelo of MODELOS) {
-    for (let intento = 0; intento < 2; intento++) {
-      let r: Response;
-      try {
-        r = await llamarGemini(modelo, contents, systemText);
-      } catch (e) {
-        console.error(`Gemini ${modelo}: error de conexión/tiempo`, e);
-        ultimoEstado = 0;
-        break; // siguiente modelo
-      }
-      const data = await r.json().catch(() => ({}));
-      if (r.ok) {
-        const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts || [];
-        const texto = parts
-          .filter((p) => !p.thought)
-          .map((p) => p.text || "")
-          .join("")
-          .trim();
-        if (texto) return { ok: true as const, texto };
-        console.error(`Gemini ${modelo}: respuesta vacía`, JSON.stringify(data).slice(0, 500));
-        break; // prueba otro modelo
-      }
-      ultimoEstado = r.status;
-      if (r.status === 429 && /per ?day|perday|daily/i.test(JSON.stringify(data))) cuotaDiaria = true;
-      console.error(`Gemini ${modelo}: HTTP ${r.status}`, JSON.stringify(data).slice(0, 500));
-      const msg = JSON.stringify(data).toLowerCase();
-      if (r.status === 400 && msg.includes("api key")) return { ok: false as const, estado: 401 };
-      if (r.status === 401 || r.status === 403) return { ok: false as const, estado: r.status };
-      if ([500, 502, 503, 504].includes(r.status) && intento === 0) {
-        await esperar(700);
-        continue; // reintento en el mismo modelo
-      }
-      break; // 404 / 400 (modelo no válido) / segundo fallo → siguiente modelo
+  const orden = ordenParaEstaPregunta(await listaModelos()).slice(0, 6); // máximo 6 intentos por pregunta
+  let hubo429 = false;
+  for (const modelo of orden) {
+    let r: Response;
+    try {
+      r = await llamarGemini(modelo, contents, systemText);
+    } catch (e) {
+      console.error(`Gemini ${modelo}: error de conexión/tiempo`, e);
+      aparcado.set(modelo, Date.now() + 20e3);
+      continue;
     }
+    const data = await r.json().catch(() => ({}));
+    if (r.ok) {
+      const parts: { text?: string; thought?: boolean }[] = data.candidates?.[0]?.content?.parts || [];
+      const texto = parts
+        .filter((p) => !p.thought)
+        .map((p) => p.text || "")
+        .join("")
+        .trim();
+      if (texto) return { ok: true as const, texto, modelo };
+      console.error(`Gemini ${modelo}: respuesta vacía`, JSON.stringify(data).slice(0, 400));
+      continue;
+    }
+    const txt = JSON.stringify(data).toLowerCase();
+    if ((r.status === 400 && txt.includes("api key")) || r.status === 401 || r.status === 403) {
+      console.error(`Gemini: clave rechazada (HTTP ${r.status})`, txt.slice(0, 300));
+      return { ok: false as const, estado: r.status };
+    }
+    if (r.status === 429) hubo429 = true;
+    const ms = tiempoDeAparcado(r.status, data);
+    if (ms) aparcado.set(modelo, Date.now() + ms);
+    console.error(`Gemini ${modelo}: HTTP ${r.status} → aparcado ${Math.round(ms / 1000)} s`, txt.slice(0, 300));
   }
-  return { ok: false as const, estado: ultimoEstado, cuotaDiaria };
+  return { ok: false as const, estado: hubo429 ? 429 : 0 };
 }
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -215,23 +282,21 @@ export async function POST(req: Request) {
   const r = await responder(contents);
   if (r.ok) return json({ reply: r.texto });
 
-  if (r.estado === 429) console.error(r.cuotaDiaria ? "Cuota DIARIA gratuita de Gemini agotada: activa la facturación en AI Studio o espera a mañana." : "Límite por minuto de Gemini.");
   const reply =
-    "cuotaDiaria" in r && r.cuotaDiaria
-      ? "Hoy ya he hablado mucho y me he quedado sin voz 😅 Pregunta en barra y te ayudan encantados."
-      : r.estado === 429
-      ? "Ahora mismo hay mucha gente preguntando 😅 Dame un minuto y vuelve a probar, o pregunta en barra."
+    r.estado === 429
+      ? "Ahora mismo estoy desbordado de preguntas 😅 Prueba en un ratito o pregunta en barra, que te ayudan encantados."
       : "Uy, se me ha ido el santo al cielo ☕ ¿Me lo repites? Si sigue fallando, en barra te ayudan encantados.";
   return json({ reply });
 }
 
 /**
- * Diagnóstico: https://TU-WEB/api/chat?diagnostico=1
- * Dice si la clave está configurada y qué responde Google con cada modelo (sin mostrar la clave).
+ * Diagnóstico: https://TU-WEB/api/chat?diagnostico=1  → modelos disponibles y cuáles están aparcados (no gasta cuota)
+ *              https://TU-WEB/api/chat?diagnostico=probar → además prueba los 4 primeros (gasta 4 preguntas)
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  if (!url.searchParams.has("diagnostico")) {
+  const modo = url.searchParams.get("diagnostico");
+  if (modo === null) {
     return new Response(JSON.stringify({ error: "Método no permitido. Usa ?diagnostico=1 para comprobar el chat." }), {
       status: 405,
       headers: { Allow: "POST", "Content-Type": "application/json" },
@@ -241,18 +306,30 @@ export async function GET(req: Request) {
   if (!key) {
     return json({ clave_configurada: false, solucion: "Añade GEMINI_API_KEY en Vercel → Settings → Environment Variables (Production) y haz Redeploy." });
   }
-  const prueba: GeminiContent[] = [{ role: "user", parts: [{ text: "Di solo: ok" }] }];
-  const resultados: Record<string, unknown> = {};
-  for (const modelo of MODELOS) {
-    try {
-      const r = await llamarGemini(modelo, prueba, "Responde solo 'ok'.");
-      const d = await r.json().catch(() => ({}));
-      resultados[modelo] = r.ok ? "OK ✅" : { estado_http: r.status, mensaje_de_google: d?.error?.message ?? d };
-    } catch (e) {
-      resultados[modelo] = { error_de_conexion: String(e) };
+  catalogo = null; // refresca la lista
+  const modelos = await listaModelos();
+  const ahora = Date.now();
+  const estado = Object.fromEntries(
+    modelos.map((m) => {
+      const hasta = aparcado.get(m) ?? 0;
+      return [m, hasta > ahora ? `aparcado ${Math.round((hasta - ahora) / 60000)} min` : "disponible"];
+    }),
+  );
+  const pruebas: Record<string, unknown> = {};
+  if (modo === "probar") {
+    const prueba: GeminiContent[] = [{ role: "user", parts: [{ text: "Di solo: ok" }] }];
+    for (const m of modelos.slice(0, 4)) {
+      try {
+        const r = await llamarGemini(m, prueba, "Responde solo 'ok'.");
+        const d = await r.json().catch(() => ({}));
+        pruebas[m] = r.ok ? "OK ✅" : { estado_http: r.status, mensaje_de_google: d?.error?.message ?? d };
+      } catch (e) {
+        pruebas[m] = { error_de_conexion: String(e) };
+      }
     }
   }
-  return new Response(JSON.stringify({ clave_configurada: true, clave_empieza_por: key.slice(0, 4) + "…", modelos_en_orden: MODELOS, resultados }), {
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
+  return new Response(
+    JSON.stringify({ clave_configurada: true, clave_empieza_por: key.slice(0, 4) + "…", modelos_en_rotacion: modelos.length, estado, pruebas }, null, 2),
+    { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
+  );
 }
