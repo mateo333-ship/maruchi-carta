@@ -1,0 +1,317 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #f5ede0;
+  --color-paper: #fbf6ee;
+  --color-sand: #efe3d0;
+  --color-espresso: #2a1a12;
+  --color-roast: #5a3522;
+  --color-caramel: #c8874a;
+  --color-teal: #2f6b66;
+  --color-teal-deep: #1f4e4a;
+  --color-tomato: #c8452c;
+  --color-muted: #8a6f5c;
+  --font-display: "Bowlby One", "Arial Black", sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-serif: "Instrument Serif", Georgia, serif;
+}
+
+:root {
+  --bg: #f5ede0;
+  --accent: #2f6b66;
+  --accent-2: #c8874a;
+  color-scheme: light;
+}
+
+body[data-season="winter"] {
+  --bg: #ece0cd;
+  --accent: #7a3b22;
+  --accent-2: #2f6b66;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--color-espresso);
+  font-family: var(--font-sans);
+  transition: background-color 700ms ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* grano de papel */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35  0 0 0 0 0.25  0 0 0 0 0.18  0 0 0 .18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.section-anchor {
+  scroll-margin-top: 150px;
+}
+
+.dotted-leader {
+  flex: 1;
+  border-bottom: 2px dotted color-mix(in oklab, var(--color-espresso) 30%, transparent);
+  transform: translateY(-5px);
+  min-width: 16px;
+}
+
+/* ───────────── Buscador (Uiverse · uiverse-astronaut) ───────────── */
+.cir-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 320px;
+  max-width: 100%;
+  height: 48px;
+  padding: 0 8px 0 18px;
+  background: var(--color-cloud, #fffdf9);
+  border: 1px solid var(--color-edge, #e6d8c4);
+  border-radius: 999px;
+  box-shadow:
+    0 1px 1px rgba(42, 26, 18, 0.03),
+    0 18px 36px -22px rgba(42, 26, 18, 0.28);
+  font-family: var(--font-sans);
+  transition:
+    border-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cir-search__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-mist, #8a6f5c);
+  flex-shrink: 0;
+}
+.cir-search__field {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-ink, #2a1a12);
+}
+.cir-search__field::placeholder {
+  color: #a8927f;
+}
+.cir-search__kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  background: #f5ede0;
+  border: 1px solid #eadcc8;
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-mist, #8a6f5c);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.cir-search:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--accent) 22%, transparent),
+    0 18px 36px -22px rgba(42, 26, 18, 0.3);
+}
+
+/* ───────────── Toggle verano / invierno (Uiverse · mobinkakei) ───────────── */
+.toggleWrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 64px;
+  color: var(--color-espresso);
+}
+.toggleWrapper .input {
+  position: absolute;
+  left: -99em;
+}
+.toggle {
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+  width: 90px;
+  height: 50px;
+  background-color: #83d8ff;
+  border-radius: 84px;
+  transition: background-color 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95);
+}
+.toggle:before {
+  content: "Verano";
+  position: absolute;
+  left: -64px;
+  top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-espresso);
+  transition: color 200ms;
+}
+.toggle:after {
+  content: "Invierno";
+  position: absolute;
+  right: -66px;
+  top: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #b3a08e;
+  transition: color 200ms;
+}
+.toggle__handler {
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+  top: 3px;
+  left: 3px;
+  width: 44px;
+  height: 44px;
+  background-color: #ffcf96;
+  border-radius: 50px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  transform: rotate(-45deg);
+}
+.toggle__handler .crater {
+  position: absolute;
+  background-color: #e8cda5;
+  opacity: 0;
+  transition: opacity 200ms ease-in-out;
+  border-radius: 100%;
+}
+.toggle__handler .crater--1 { top: 18px; left: 10px; width: 4px; height: 4px; }
+.toggle__handler .crater--2 { top: 28px; left: 22px; width: 6px; height: 6px; }
+.toggle__handler .crater--3 { top: 10px; left: 25px; width: 8px; height: 8px; }
+.star {
+  position: absolute;
+  background-color: #fff;
+  transition: all 300ms cubic-bezier(0.445, 0.05, 0.55, 0.95);
+  border-radius: 50%;
+}
+.star--1 { top: 10px; left: 35px; z-index: 0; width: 30px; height: 3px; }
+.star--2 { top: 18px; left: 28px; z-index: 1; width: 30px; height: 3px; }
+.star--3 { top: 27px; left: 40px; z-index: 0; width: 30px; height: 3px; }
+.star--4,
+.star--5,
+.star--6 {
+  opacity: 0;
+  transition: all 300ms 0s cubic-bezier(0.445, 0.05, 0.55, 0.95);
+}
+.star--4 { top: 16px; left: 11px; z-index: 0; width: 2px; height: 2px; transform: translate3d(3px, 0, 0); }
+.star--5 { top: 32px; left: 17px; z-index: 0; width: 3px; height: 3px; transform: translate3d(3px, 0, 0); }
+.star--6 { top: 36px; left: 28px; z-index: 0; width: 2px; height: 2px; transform: translate3d(3px, 0, 0); }
+.input:checked + .toggle { background-color: #749dd6; }
+.input:checked + .toggle:before { color: #b3a08e; }
+.input:checked + .toggle:after { color: var(--color-espresso); }
+.input:checked + .toggle .toggle__handler {
+  background-color: #ffe5b5;
+  transform: translate3d(40px, 0, 0) rotate(0);
+}
+.input:checked + .toggle .toggle__handler .crater { opacity: 1; }
+.input:checked + .toggle .star--1 { width: 2px; height: 2px; }
+.input:checked + .toggle .star--2 { width: 4px; height: 4px; transform: translate3d(-5px, 0, 0); }
+.input:checked + .toggle .star--3 { width: 2px; height: 2px; transform: translate3d(-7px, 0, 0); }
+.input:checked + .toggle .star--4,
+.input:checked + .toggle .star--5,
+.input:checked + .toggle .star--6 { opacity: 1; transform: translate3d(0, 0, 0); }
+.input:checked + .toggle .star--4 { transition: all 300ms 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95); }
+.input:checked + .toggle .star--5 { transition: all 300ms 300ms cubic-bezier(0.445, 0.05, 0.55, 0.95); }
+.input:checked + .toggle .star--6 { transition: all 300ms 400ms cubic-bezier(0.445, 0.05, 0.55, 0.95); }
+.input:focus-visible + .toggle { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* versión compacta para la barra fija */
+.toggleWrapper.is-compact { padding: 0; width: 72px; height: 42px; flex-shrink: 0; justify-content: center; }
+.toggleWrapper.is-compact .toggle { transform: scale(0.78); transform-origin: center; }
+.toggleWrapper.is-compact .toggle:before,
+.toggleWrapper.is-compact .toggle:after { display: none; }
+
+/* ───────────── Tiempo (Uiverse · vinodjangid07) ───────────── */
+.cardContainer {
+  width: fit-content;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+.weather-card {
+  position: relative;
+  width: 220px;
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 10px;
+  border-radius: 18px;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  background-color: rgba(42, 26, 18, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  cursor: pointer;
+  text-align: center;
+}
+.weather-card .city { font-weight: 700; font-size: 0.9em; letter-spacing: 1.2px; color: white; }
+.weather-card .weather { font-weight: 500; font-size: 0.7em; letter-spacing: 1.2px; color: rgb(214, 200, 186); }
+.weather-card .temp { font-size: 2.4em; color: white; font-family: var(--font-display); line-height: 1; }
+.minmaxContainer { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.min, .max {
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0px 20px;
+  gap: 4px;
+}
+.max { align-items: flex-start; border-left: 2px solid rgba(255, 255, 255, 0.8); }
+.maxHeading, .minHeading { font-size: 0.7em; font-weight: 600; color: white; }
+.maxTemp, .minTemp { font-size: 0.65em; font-weight: 500; color: rgb(214, 200, 186); }
+.cardContainer::before {
+  width: 110px;
+  height: 110px;
+  content: "";
+  position: absolute;
+  background-color: var(--accent-2);
+  z-index: -1;
+  border-radius: 50%;
+  left: 100px;
+  top: 40px;
+  transition: all 1s;
+}
+.cardContainer:hover::before { transform: translate(-50px, 50px); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+.marquee { animation: marquee 32s linear infinite; }
