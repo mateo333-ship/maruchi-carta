@@ -16,7 +16,7 @@ export const maxDuration = 30;
  */
 const MODELOS = Array.from(
   new Set(
-    [process.env.GEMINI_MODEL, "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-flash-latest"].filter(
+    [process.env.GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash", "gemini-flash-latest"].filter(
       Boolean,
     ) as string[],
   ),
@@ -115,7 +115,7 @@ const TEXTOS_DE_ERROR = [/no he podido responder/i, /mucha gente preguntando/i, 
 
 async function llamarGemini(modelo: string, contents: GeminiContent[], systemText: string) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`;
-  const generationConfig: Record<string, unknown> = { temperature: 0.8, topP: 0.95, maxOutputTokens: 1024 };
+  const generationConfig: Record<string, unknown> = { temperature: 0.8, topP: 0.95, maxOutputTokens: 2048 };
   // En los modelos 2.5 flash el "pensamiento" gasta tokens y tiempo: aquí no hace falta
   if (/2\.5-flash/.test(modelo)) generationConfig.thinkingConfig = { thinkingBudget: 0 };
   return fetch(url, {
@@ -140,6 +140,7 @@ const esperar = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function responder(contents: GeminiContent[]) {
   const systemText = instrucciones();
   let ultimoEstado = 0;
+  let cuotaDiaria = false;
   for (const modelo of MODELOS) {
     for (let intento = 0; intento < 2; intento++) {
       let r: Response;
@@ -163,18 +164,19 @@ async function responder(contents: GeminiContent[]) {
         break; // prueba otro modelo
       }
       ultimoEstado = r.status;
+      if (r.status === 429 && /per ?day|perday|daily/i.test(JSON.stringify(data))) cuotaDiaria = true;
       console.error(`Gemini ${modelo}: HTTP ${r.status}`, JSON.stringify(data).slice(0, 500));
       const msg = JSON.stringify(data).toLowerCase();
       if (r.status === 400 && msg.includes("api key")) return { ok: false as const, estado: 401 };
       if (r.status === 401 || r.status === 403) return { ok: false as const, estado: r.status };
-      if ([429, 500, 502, 503, 504].includes(r.status) && intento === 0) {
+      if ([500, 502, 503, 504].includes(r.status) && intento === 0) {
         await esperar(700);
         continue; // reintento en el mismo modelo
       }
       break; // 404 / 400 (modelo no válido) / segundo fallo → siguiente modelo
     }
   }
-  return { ok: false as const, estado: ultimoEstado };
+  return { ok: false as const, estado: ultimoEstado, cuotaDiaria };
 }
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
@@ -213,8 +215,11 @@ export async function POST(req: Request) {
   const r = await responder(contents);
   if (r.ok) return json({ reply: r.texto });
 
+  if (r.estado === 429) console.error(r.cuotaDiaria ? "Cuota DIARIA gratuita de Gemini agotada: activa la facturación en AI Studio o espera a mañana." : "Límite por minuto de Gemini.");
   const reply =
-    r.estado === 429
+    "cuotaDiaria" in r && r.cuotaDiaria
+      ? "Hoy ya he hablado mucho y me he quedado sin voz 😅 Pregunta en barra y te ayudan encantados."
+      : r.estado === 429
       ? "Ahora mismo hay mucha gente preguntando 😅 Dame un minuto y vuelve a probar, o pregunta en barra."
       : "Uy, se me ha ido el santo al cielo ☕ ¿Me lo repites? Si sigue fallando, en barra te ayudan encantados.";
   return json({ reply });
