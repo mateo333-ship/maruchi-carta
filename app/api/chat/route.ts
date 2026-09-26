@@ -74,9 +74,22 @@ async function llamarGemini(modelo: string, contents: GeminiContent[]) {
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 
+/** ¿Google dice que el modelo no existe / no está disponible? (404, o 400 con "not found"/"not supported") */
+async function modeloNoDisponible(r: Response) {
+  if (r.status === 404) return true;
+  if (r.status !== 400) return false;
+  try {
+    const txt = JSON.stringify(await r.clone().json()).toLowerCase();
+    return txt.includes("not found") || txt.includes("not supported") || txt.includes("is not available");
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   if (!process.env.GEMINI_API_KEY) {
-    return json({ error: "Falta la variable GEMINI_API_KEY en Vercel" }, 500);
+    console.error("Falta la variable de entorno GEMINI_API_KEY (Vercel → Settings → Environment Variables) o no se ha hecho redeploy.");
+    return json({ error: "Falta la variable GEMINI_API_KEY en Vercel", reply: "Ahora mismo no puedo responder 😅 Pregunta en barra y te ayudan encantados." }, 500);
   }
 
   let body: { messages?: unknown } = {};
@@ -102,8 +115,8 @@ export async function POST(req: Request) {
 
   try {
     let r = await llamarGemini(MODELO_PRINCIPAL, contents);
-    if (r.status === 404 && MODELO_PRINCIPAL !== MODELO_RESERVA) {
-      r = await llamarGemini(MODELO_RESERVA, contents); // por si el modelo principal deja de existir
+    if (MODELO_PRINCIPAL !== MODELO_RESERVA && (await modeloNoDisponible(r))) {
+      r = await llamarGemini(MODELO_RESERVA, contents); // por si el modelo principal no existe o dejó de existir
     }
     const data = await r.json();
 
@@ -129,10 +142,41 @@ export async function POST(req: Request) {
   }
 }
 
-// Cualquier otro método → 405, igual que la función original
-export function GET() {
-  return new Response(JSON.stringify({ error: "Método no permitido" }), {
-    status: 405,
-    headers: { Allow: "POST", "Content-Type": "application/json" },
+/**
+ * Diagnóstico: abre https://TU-WEB/api/chat?diagnostico=1 en el navegador.
+ * Dice si la clave está configurada y qué responde Google (sin mostrar nunca la clave).
+ */
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  if (!url.searchParams.has("diagnostico")) {
+    return new Response(JSON.stringify({ error: "Método no permitido. Usa ?diagnostico=1 para comprobar el chat." }), {
+      status: 405,
+      headers: { Allow: "POST", "Content-Type": "application/json" },
+    });
+  }
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    return json({
+      clave_configurada: false,
+      solucion: "Añade GEMINI_API_KEY en Vercel → Settings → Environment Variables (Production) y haz Redeploy.",
+    });
+  }
+  const prueba: GeminiContent[] = [{ role: "user", parts: [{ text: "Di solo: ok" }] }];
+  const resultados: Record<string, unknown> = {};
+  for (const modelo of Array.from(new Set([MODELO_PRINCIPAL, MODELO_RESERVA]))) {
+    try {
+      const r = await llamarGemini(modelo, prueba);
+      const d = await r.json().catch(() => ({}));
+      resultados[modelo] = r.ok ? "OK ✅" : { estado_http: r.status, mensaje_de_google: d?.error?.message ?? d };
+    } catch (e) {
+      resultados[modelo] = { error_de_conexion: String(e) };
+    }
+  }
+  return json({
+    clave_configurada: true,
+    clave_empieza_por: key.slice(0, 4) + "…", // solo 4 caracteres, para comprobar que es la clave correcta
+    modelo_principal: MODELO_PRINCIPAL,
+    modelo_reserva: MODELO_RESERVA,
+    resultados,
   });
 }
