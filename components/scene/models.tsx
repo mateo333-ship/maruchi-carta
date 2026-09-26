@@ -454,6 +454,8 @@ export function Can({ v }: { v: Extract<Visual, { kind: "can" }> }) {
 /* ───────────────────────── BOTELLA ───────────────────────── */
 
 export function Bottle({ v }: { v: Extract<Visual, { kind: "bottle" }> }) {
+  // líquidos muy claros (agua) se pintan transparentes y sin burbujas
+  const isClear = !!v.liquid && new THREE.Color(v.liquid).getHSL({ h: 0, s: 0, l: 0 }).l > 0.85;
   const root = useRef<THREE.Group>(null);
   const cap = useRef<THREE.Mesh>(null);
   const bub = useRef<(THREE.Mesh | null)[]>([]);
@@ -479,7 +481,7 @@ export function Bottle({ v }: { v: Extract<Visual, { kind: "bottle" }> }) {
     bub.current.forEach((m, i) => {
       if (!m) return;
       const p = ((t - 1.6) * 0.45 + seeds[i].o) % 1;
-      m.visible = t > 1.6 && v.liquid !== "#e6f3f7";
+      m.visible = t > 1.6 && !!v.liquid && !isClear;
       m.position.set(seeds[i].x * (1 - p * 0.6), 0.12 + p * 1.6, seeds[i].z * (1 - p * 0.6));
     });
   });
@@ -490,7 +492,11 @@ export function Bottle({ v }: { v: Extract<Visual, { kind: "bottle" }> }) {
       </mesh>
       {v.liquid && (
         <mesh geometry={liquid}>
-          <Liquid color={v.liquid} gloss={0.2} />
+          {isClear ? (
+            <meshPhysicalMaterial color={v.liquid} transparent opacity={0.28} roughness={0.02} clearcoat={1} envMapIntensity={2} depthWrite={false} />
+          ) : (
+            <meshPhysicalMaterial color={v.liquid} transparent opacity={0.9} roughness={0.15} clearcoat={0.6} />
+          )}
         </mesh>
       )}
       <mesh position={[0, 0.8, 0]}>
@@ -588,18 +594,32 @@ export function Beer({ v }: { v: Extract<Visual, { kind: "beer" }> }) {
 export function Wine({ v }: { v: Extract<Visual, { kind: "wine" }> }) {
   const root = useRef<THREE.Group>(null);
   const liq = useRef<THREE.Group>(null);
-  const glass = useMemo(
-    () =>
-      lathe([
-        [0, 0], [0.6, 0], [0.62, 0.025], [0.12, 0.06], [0.05, 0.12], [0.045, 0.95], [0.1, 1.04],
-        [0.38, 1.16], [0.55, 1.45], [0.56, 1.7], [0.48, 2.15],
-      ]),
-    [],
-  );
+  // copa tipo tulipa: perfil suave generado por una función
+  const bowlR = (u: number) =>
+    0.1 + 0.48 * Math.sin((Math.PI / 2) * Math.min(1, u / 0.55)) - 0.1 * Math.pow(Math.max(0, (u - 0.55) / 0.45), 2);
+  const BOWL_Y0 = 1.04;
+  const BOWL_H = 1.11;
+  const glass = useMemo(() => {
+    const pts: [number, number][] = [[0, 0], [0.6, 0], [0.62, 0.025], [0.12, 0.06], [0.05, 0.12], [0.045, 0.95], [0.08, 1.0]];
+    for (let i = 0; i <= 28; i++) {
+      const u = i / 28;
+      pts.push([bowlR(u), BOWL_Y0 + u * BOWL_H]);
+    }
+    return lathe(pts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const liqGeo = useMemo(() => {
-    const g = lathe([[0, 1.07], [0.1, 1.075], [0.36, 1.19], [0.5, 1.4], [0.515, 1.5], [0, 1.5]]);
-    g.translate(0, -1.07, 0);
+    const top = 0.36;
+    const pts: [number, number][] = [[0, BOWL_Y0 + 0.03]];
+    for (let i = 0; i <= 16; i++) {
+      const u = 0.03 + (i / 16) * (top - 0.03);
+      pts.push([Math.max(0.01, bowlR(u) - 0.02), BOWL_Y0 + u * BOWL_H]);
+    }
+    pts.push([0, BOWL_Y0 + top * BOWL_H]);
+    const g = lathe(pts);
+    g.translate(0, -(BOWL_Y0 + 0.03), 0);
     return g;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useTimeline((t) => {
     if (root.current) {
@@ -620,7 +640,7 @@ export function Wine({ v }: { v: Extract<Visual, { kind: "wine" }> }) {
       <mesh geometry={glass} castShadow>
         <Glass />
       </mesh>
-      <group ref={liq} position={[0, 1.07, 0]} visible={false}>
+      <group ref={liq} position={[0, BOWL_Y0 + 0.03, 0]} visible={false}>
         <mesh geometry={liqGeo}>
           <meshPhysicalMaterial color={v.liquid} roughness={0.05} clearcoat={1} transparent opacity={0.93} />
         </mesh>

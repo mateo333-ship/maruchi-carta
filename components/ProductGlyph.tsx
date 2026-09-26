@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { Topping, Visual } from "@/data/menu";
 
 const TOPPING_COLOR: Record<Topping, string> = {
@@ -76,16 +77,17 @@ function CupGlyph({ liquid, foam, art, glass, x = 0, y = 0, s = 1 }: { liquid: s
 }
 
 function IcedGlyph({ layers, straw, garnish }: { layers: string[]; straw?: string; garnish?: string }) {
-  const h = 58 / layers.length;
+  const clipId = `glass-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const h = 58 / Math.max(1, layers.length);
   return (
     <g>
       <defs>
-        <clipPath id="glassclip">
+        <clipPath id={clipId}>
           <path d="M30 20 L36 88 L64 88 L70 20 Z" />
         </clipPath>
       </defs>
       {straw && <rect x="54" y="6" width="5" height="60" rx="2.5" fill={straw} transform="rotate(12 56 36)" />}
-      <g clipPath="url(#glassclip)">
+      <g clipPath={`url(#${clipId})`}>
         {layers.map((c, i) => (
           <rect key={i} x="20" y={88 - (i + 1) * h} width="60" height={h + 0.5} fill={c} />
         ))}

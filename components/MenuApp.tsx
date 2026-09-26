@@ -1,15 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "motion/react";
 import { GooeyNav } from "@/components/ui/gooey-nav";
 import { SearchBar } from "./SearchBar";
 import { SeasonToggle } from "./SeasonToggle";
+import { Logo } from "./Logo";
 import { WeatherCard, describeWeather, useWeather } from "./WeatherCard";
 import { ProductCard } from "./ProductCard";
 import { ProductModal } from "./ProductModal";
-import { MENU, type Product } from "@/data/menu";
+import { MENU, formatPrice, type Product } from "@/data/menu";
 import { SITE } from "@/data/site";
 
 const HeroScene = dynamic(() => import("./scene/ProductScene"), { ssr: false });
@@ -18,21 +19,36 @@ const normalize = (s: string) =>
   s
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+    .replace(/[\u0300-\u036f]/g, "");
 
 type Flat = Product & { categoryId: string; categoryLabel: string };
 
-const HERO_PRODUCT = MENU.find((c) => c.id === "cafes")!.products.find((p) => p.id === "latte-caramelo")!;
+// Producto de la portada: el latte caramelo o, si se quitara de la carta, la primera taza que haya.
+const ALL = MENU.flatMap((c) => c.products);
+const HERO_PRODUCT: Product | undefined =
+  ALL.find((p) => p.id === "latte-caramelo") ?? ALL.find((p) => p.visual.kind === "cup") ?? ALL[0];
 
 export default function MenuApp() {
   const [winter, setWinter] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const navScrollRef = useRef<HTMLDivElement>(null);
   const lockSpy = useRef(false);
   const { data: weather, error: weatherError } = useWeather();
+  const heroSceneRef = useRef<HTMLDivElement>(null);
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  // la escena 3D de portada se pausa cuando no se ve (ahorra batería y GPU)
+  useEffect(() => {
+    const el = heroSceneRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setHeroVisible(e.isIntersecting), { threshold: 0.05 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // temporada inicial según el mes
   useEffect(() => {
@@ -47,10 +63,13 @@ export default function MenuApp() {
   // atajo ⌘K / Ctrl+K / "/"
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const isInput = (e.target as HTMLElement)?.tagName === "INPUT";
+      const t = e.target as HTMLElement | null;
+      const isInput = !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+      if (document.querySelector('[role="dialog"]')) return;
       if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !isInput)) {
         e.preventDefault();
-        searchRef.current?.focus();
+        setSearchOpen(true);
+        requestAnimationFrame(() => searchRef.current?.focus());
         searchRef.current?.scrollIntoView({ block: "nearest" });
       }
     };
@@ -113,7 +132,7 @@ export default function MenuApp() {
     requestAnimationFrame(() => {
       document.getElementById(`cat-${MENU[i].id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-    window.setTimeout(() => (lockSpy.current = false), 900);
+    window.setTimeout(() => (lockSpy.current = false), 1200);
   }, []);
 
   // recomendación según el tiempo
@@ -134,8 +153,10 @@ export default function MenuApp() {
     <>
       {/* ───────── HERO ───────── */}
       <header ref={heroRef} className="relative overflow-hidden">
-        <div className="mx-auto flex max-w-[1320px] items-center justify-between px-5 pt-6 md:px-10">
-          <span className="font-display text-2xl uppercase tracking-tight">Maruchi</span>
+        <div className="mx-auto flex max-w-[1320px] items-center justify-between px-5 pt-5 md:px-10 md:pt-6">
+          <a href="#" aria-label="Maruchi, inicio" className="block">
+            <Logo className="h-14 w-auto text-[#2a1a12] md:h-16" />
+          </a>
           <div className="flex items-center gap-5 text-[13px] font-medium text-[#6d5645]">
             <a href="#carta" className="hidden transition hover:text-[#2a1a12] sm:inline">La carta</a>
             <a href={SITE.mapsUrl} target="_blank" rel="noreferrer" className="rounded-full border border-[#2a1a12]/15 px-4 py-2 transition hover:bg-[#2a1a12] hover:text-[#f5ede0]">
@@ -147,13 +168,13 @@ export default function MenuApp() {
         <div className="mx-auto grid max-w-[1320px] items-center gap-6 px-5 pb-10 pt-8 md:grid-cols-[1.05fr_1fr] md:px-10 md:pb-20 md:pt-10">
           <motion.div style={{ y: heroY, opacity: heroFade }} className="relative z-10 order-2 md:order-1">
             <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-[12px] font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">
-              Coffee &amp; brunch · {SITE.city}
+              Coffee &amp; Tea · {SITE.city}
             </motion.p>
-            <h1 className="mt-7 font-display uppercase leading-[0.86] tracking-[-0.02em] text-[#2a1a12]">
+            <h1 className="mt-10 font-display md:mt-12 uppercase leading-[0.9] tracking-[-0.02em] text-[#2a1a12]">
               {["Café,", "matcha", "& tostadas"].map((w, i) => (
                 <motion.span
                   key={w}
-                  className="block whitespace-nowrap text-[clamp(44px,7.2vw,108px)]"
+                  className="block whitespace-nowrap text-[clamp(34px,11vw,56px)] md:text-[clamp(56px,7.2vw,108px)]"
                   initial={{ opacity: 0, y: 60, rotateX: -70 }}
                   animate={{ opacity: 1, y: 0, rotateX: 0 }}
                   transition={{ delay: 0.1 + i * 0.12, type: "spring", stiffness: 120, damping: 16 }}
@@ -163,11 +184,11 @@ export default function MenuApp() {
                 </motion.span>
               ))}
             </h1>
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-6 max-w-[460px] font-serif text-[24px] italic leading-snug text-[#5a3522]">
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.55 }} className="mt-5 max-w-[460px] font-serif text-[20px] italic md:mt-6 md:text-[24px] leading-snug text-[#5a3522]">
               Sin horarios. Toca cualquier producto de la carta y míralo prepararse delante de ti.
             </motion.p>
 
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-8 flex flex-wrap items-center gap-4">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }} className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4 md:mt-8">
               <a href="#carta" className="group inline-flex items-center gap-3 rounded-full bg-[#2a1a12] py-3 pl-6 pr-3 text-[15px] font-semibold text-[#f5ede0] shadow-[0_18px_30px_-16px_rgba(42,26,18,.7)] transition hover:gap-4">
                 Ver la carta
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent-2)] text-[#2a1a12] transition group-hover:translate-y-0.5">↓</span>
@@ -175,13 +196,13 @@ export default function MenuApp() {
               <SeasonToggle winter={winter} onChange={setWinter} />
             </motion.div>
 
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }} className="mt-10 flex flex-wrap items-center gap-6">
-              <WeatherCard data={weather} error={weatherError} onClick={() => recommendation?.product && setOpenId(recommendation.product.id)} />
-              <div className="max-w-[240px]">
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.85 }} className="mt-8 flex items-center gap-4 sm:gap-6 md:mt-10">
+              <WeatherCard data={weather} error={weatherError} hint={recommendation?.product ? `Toca para ver ${recommendation.product.name}` : undefined} onClick={() => recommendation?.product && setOpenId(recommendation.product.id)} />
+              <div className="min-w-0 max-w-[260px] flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#8a6f5c]">El tiempo ahora</p>
                 {recommendation?.product ? (
                   <>
-                    <p className="mt-2 font-serif text-[20px] italic leading-snug text-[#3d2519]">{recommendation.text}</p>
+                    <p className="mt-2 font-serif text-[18px] italic leading-snug text-[#3d2519] sm:text-[20px]">{recommendation.text}</p>
                     <button type="button" onClick={() => setOpenId(recommendation.product!.id)} className="mt-3 inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2 text-[13px] font-semibold text-white transition hover:brightness-110">
                       {recommendation.product.name} →
                     </button>
@@ -198,31 +219,35 @@ export default function MenuApp() {
             initial={{ opacity: 0, scale: 0.92, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 90, damping: 18 }}
-            className="relative order-1 mx-auto aspect-[4/5] w-full max-w-[520px] md:order-2"
+            className="relative order-1 mx-auto aspect-[1/1] w-full max-w-[400px] sm:aspect-[4/5] md:order-2 md:max-w-[520px]"
           >
             <div className="absolute inset-0 rounded-t-[999px] rounded-b-[40px] bg-[var(--accent)] shadow-[inset_0_-40px_80px_rgba(0,0,0,.18)] transition-colors duration-700" />
             <div className="absolute inset-[14px] rounded-t-[999px] rounded-b-[30px] border-2 border-dashed border-white/25" />
             <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden rounded-t-[999px] rounded-b-[40px]">
-              <span className="absolute inset-x-0 top-[14%] select-none text-center font-display text-[clamp(64px,9vw,128px)] uppercase leading-[0.9] text-white/15">
-                Maru
-                <br />
-                chi
-              </span>
+              <Logo title="" aria-hidden className="absolute left-1/2 top-[12%] h-[62%] w-auto -translate-x-1/2 text-white/[0.13]" />
             </div>
-            <div className="absolute inset-0">
-              <HeroScene product={HERO_PRODUCT} distance={1.45} />
+            <div ref={heroSceneRef} className="absolute inset-0">
+              {HERO_PRODUCT && (
+                <Suspense fallback={null}>
+                  <HeroScene product={HERO_PRODUCT} distance={1.45} paused={!heroVisible || openId !== null} />
+                </Suspense>
+              )}
             </div>
-            <motion.span
-              animate={{ y: [0, -8, 0] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="absolute -left-2 top-[22%] rotate-[-6deg] rounded-full bg-[#fbf6ee] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] shadow-lg md:-left-8"
-            >
-              Latte caramelo · 3,20 €
-            </motion.span>
+            {HERO_PRODUCT && (
+              <motion.button
+                type="button"
+                onClick={() => setOpenId(HERO_PRODUCT.id)}
+                animate={{ y: [0, -8, 0] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="absolute -left-1 top-[16%] rotate-[-6deg] rounded-full bg-[#fbf6ee] px-3 py-1.5 text-[10px] sm:top-[22%] sm:px-4 sm:py-2 sm:text-[12px] font-semibold uppercase tracking-[0.14em] shadow-lg transition-colors hover:bg-white md:-left-8"
+              >
+                {HERO_PRODUCT.name} · {formatPrice(HERO_PRODUCT.price)}
+              </motion.button>
+            )}
             <motion.span
               animate={{ y: [0, 8, 0] }}
               transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-              className="absolute -right-2 bottom-[18%] rotate-[5deg] rounded-full bg-[#2a1a12] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#f5ede0] shadow-lg md:-right-6"
+              className="absolute -right-1 bottom-[14%] rotate-[5deg] rounded-full bg-[#2a1a12] px-3 py-1.5 text-[10px] sm:bottom-[18%] sm:px-4 sm:py-2 sm:text-[12px] font-semibold uppercase tracking-[0.14em] text-[#f5ede0] shadow-lg md:-right-6"
             >
               ✺ Gíralo
             </motion.span>
@@ -230,9 +255,9 @@ export default function MenuApp() {
         </div>
 
         {/* marquee */}
-        <div className="relative flex overflow-hidden border-y border-[#2a1a12]/10 bg-[#2a1a12] py-4 text-[#f5ede0]">
+        <div className="relative flex overflow-hidden border-y border-[#2a1a12]/10 bg-[#2a1a12] py-3 text-[#f5ede0] md:py-4">
           {[0, 1].map((k) => (
-            <div key={k} className="marquee flex shrink-0 items-center gap-10 pr-10 font-display text-[22px] uppercase tracking-tight" aria-hidden={k === 1}>
+            <div key={k} className="marquee flex shrink-0 items-center gap-10 pr-10 font-display text-[18px] uppercase tracking-tight md:text-[22px]" aria-hidden={k === 1}>
               {MENU.map((c) => (
                 <span key={c.id} className="flex items-center gap-10 whitespace-nowrap">
                   {c.title}
@@ -246,8 +271,12 @@ export default function MenuApp() {
 
       {/* ───────── BARRA FIJA ───────── */}
       <div id="carta" className="sticky top-0 z-40 border-b border-[#2a1a12]/10 bg-[color-mix(in_oklab,var(--bg)_86%,transparent)] backdrop-blur-xl transition-colors duration-700">
-        <div className="mx-auto flex max-w-[1320px] flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:gap-5 md:px-10">
-          <div ref={navScrollRef} className="no-scrollbar -mx-4 overflow-x-auto px-4 md:mx-0 md:flex-1 md:px-0">
+        <div className="mx-auto flex max-w-[1320px] items-center gap-2 px-3 py-2.5 md:gap-5 md:px-10 md:py-3">
+          {/* categorías (en móvil y tablet se ocultan mientras buscas) */}
+          <div
+            ref={navScrollRef}
+            className={`no-scrollbar min-w-0 flex-1 overflow-x-auto [mask-image:linear-gradient(90deg,#000_88%,transparent)] lg:[mask-image:none] ${searchOpen ? "hidden lg:block" : "block"}`}
+          >
             <GooeyNav
               items={MENU.map((c) => c.label)}
               value={active}
@@ -255,15 +284,34 @@ export default function MenuApp() {
               size="sm"
               activeColor="#2a1a12"
               activeLabelColor="#f5ede0"
-              className="py-1"
+              className="py-1 pr-6 lg:pr-0"
             />
           </div>
-          <div className="flex min-w-0 items-center gap-2 md:gap-3">
-            <div className="min-w-0 flex-1 md:flex-none">
-              <SearchBar ref={searchRef} value={query} onChange={setQuery} className="!w-full md:!w-[300px]" />
-            </div>
-            <SeasonToggle winter={winter} onChange={setWinter} compact />
+          {/* buscador: siempre visible en escritorio, desplegable en móvil y tablet */}
+          <div className={`min-w-0 lg:flex-none ${searchOpen ? "flex-1" : "hidden lg:block"}`}>
+            <SearchBar ref={searchRef} value={query} onChange={setQuery} className="!h-11 !w-full lg:!h-12 lg:!w-[300px]" />
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (searchOpen) {
+                setQuery("");
+                setSearchOpen(false);
+              } else {
+                setSearchOpen(true);
+                requestAnimationFrame(() => searchRef.current?.focus());
+              }
+            }}
+            aria-label={searchOpen ? "Cerrar búsqueda" : "Buscar en la carta"}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e6d8c4] bg-[#fffdf9] text-[#5a3522] shadow-[0_10px_24px_-18px_rgba(42,26,18,.5)] lg:hidden"
+          >
+            {searchOpen ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+            ) : (
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            )}
+          </button>
+          <SeasonToggle winter={winter} onChange={setWinter} compact />
         </div>
       </div>
 
@@ -272,7 +320,7 @@ export default function MenuApp() {
         <AnimatePresence mode="wait">
           <motion.div key={season} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
             <p className="font-serif text-[22px] italic text-[#5a3522]">
-              {winter ? "Carta de invierno" : "Carta de verano"} · {totalVisible} productos
+              {winter ? "Carta de invierno" : "Carta de verano"} · {totalVisible} {totalVisible === 1 ? "producto" : "productos"}
               {query && <> para “{query}”</>}
             </p>
           </motion.div>
@@ -307,8 +355,8 @@ export default function MenuApp() {
                 </motion.h2>
                 <p className="max-w-[320px] font-serif text-[19px] italic leading-snug text-[#6d5645] md:text-right">{c.intro}</p>
               </div>
-              <motion.ul layout className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-                <AnimatePresence mode="popLayout">
+              <motion.ul layout className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
+                <AnimatePresence initial={false}>
                   {c.products.map((p, i) => (
                     <ProductCard key={p.id} product={p} index={i} onOpen={() => setOpenId(p.id)} />
                   ))}
@@ -321,7 +369,10 @@ export default function MenuApp() {
 
       {/* ───────── FOOTER ───────── */}
       <footer className="relative overflow-hidden bg-[#2a1a12] text-[#f5ede0]">
-        <div className="mx-auto grid max-w-[1320px] gap-10 px-5 py-16 md:grid-cols-3 md:px-10">
+        <div className="mx-auto grid max-w-[1320px] gap-10 px-5 pb-10 pt-14 sm:grid-cols-2 md:px-10 md:pt-20 lg:grid-cols-[1.2fr_1fr_1fr_1fr]">
+          <div className="sm:col-span-2 lg:col-span-1">
+            <Logo className="h-36 w-auto text-[#f5ede0] md:h-44" />
+          </div>
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-2)]">Dónde</p>
             <p className="mt-3 font-serif text-2xl italic">{SITE.city}, Barcelona</p>
@@ -332,19 +383,20 @@ export default function MenuApp() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-2)]">La carta</p>
             <p className="mt-3 text-sm leading-relaxed text-[#f5ede0]/75">
-              Precios con IVA incluido. Leche vegetal disponible. Consulta alérgenos en barra. La carta cambia con la temporada.
+              Precios con IVA incluido. Consulta alérgenos en barra. La carta cambia con la temporada.
             </p>
           </div>
-          <div className="md:text-right">
+          <div className="lg:text-right">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--accent-2)]">Temporada</p>
-            <div className="mt-2 md:flex md:justify-end [&_.toggle:after]:!text-[#f5ede0]/60 [&_.toggle:before]:!text-[#f5ede0]/60 [&_.input:checked+.toggle:after]:!text-[#f5ede0] [&_.input:not(:checked)+.toggle:before]:!text-[#f5ede0]">
-              <SeasonToggle winter={winter} onChange={setWinter} />
+            <div className="mt-3 flex lg:justify-end">
+              <SeasonToggle winter={winter} onChange={setWinter} onDark />
             </div>
           </div>
         </div>
-        <p aria-hidden className="pointer-events-none select-none px-3 text-center font-display text-[24vw] uppercase leading-[0.78] tracking-[-0.03em] text-[#f5ede0]/[0.06]">
-          Maruchi
-        </p>
+        <div className="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-2 border-t border-[#f5ede0]/10 px-5 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] text-[12px] text-[#f5ede0]/50 md:px-10">
+          <span>© {new Date().getFullYear()} Maruchi Coffee &amp; Tea · {SITE.city}</span>
+          <a href="#" className="transition hover:text-[#f5ede0]">Volver arriba ↑</a>
+        </div>
       </footer>
 
       <ProductModal

@@ -127,31 +127,39 @@ function WeatherIcon({ code, isDay }: { code: number; isDay: boolean }) {
 export function WeatherCard({ data, error, onClick, hint }: { data: WeatherData | null; error: boolean; onClick?: () => void; hint?: string }) {
   return (
     <div className="cardContainer">
-      <button type="button" className="weather-card" onClick={onClick} aria-label="Tiempo ahora en el local">
-        <p className="city">{SITE.city.toUpperCase()}</p>
+      <button
+        type="button"
+        className="weather-card"
+        onClick={onClick}
+        aria-label={data ? `${SITE.city}: ${data.temp} grados, ${describeWeather(data.code)}. ${hint ?? ""}` : `Tiempo en ${SITE.city}`}
+      >
+        <span className="city">{SITE.city.toUpperCase()}</span>
         {data ? (
           <>
             <WeatherIcon code={data.code} isDay={data.isDay} />
-            <p className="weather">{describeWeather(data.code).toUpperCase()}</p>
-            <p className="temp">{data.temp}°</p>
-            <div className="minmaxContainer">
-              <div className="min">
-                <p className="minHeading">Mín</p>
-                <p className="minTemp">{data.min}°</p>
-              </div>
-              <div className="max">
-                <p className="maxHeading">Máx</p>
-                <p className="maxTemp">{data.max}°</p>
-              </div>
-            </div>
+            <span className="weather">{describeWeather(data.code).toUpperCase()}</span>
+            <span className="temp">{data.temp}°</span>
+            <span className="minmaxContainer">
+              <span className="min">
+                <span className="minHeading">Mín</span>
+                <span className="minTemp">{data.min}°</span>
+              </span>
+              <span className="max">
+                <span className="maxHeading">Máx</span>
+                <span className="maxTemp">{data.max}°</span>
+              </span>
+            </span>
           </>
         ) : (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-[#d6c8ba]">
-            <span className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-            <span className="text-[11px] tracking-widest">{error ? "SIN CONEXIÓN" : "CARGANDO…"}</span>
-          </div>
+          <span className="flex flex-1 flex-col items-center justify-center gap-3 text-[#d6c8ba]">
+            {error ? (
+              <WeatherIcon code={0} isDay />
+            ) : (
+              <span className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+            )}
+            <span className="text-[11px] tracking-widest">{error ? "TIEMPO NO DISPONIBLE" : "CARGANDO…"}</span>
+          </span>
         )}
-        {hint && <span className="sr-only">{hint}</span>}
       </button>
     </div>
   );

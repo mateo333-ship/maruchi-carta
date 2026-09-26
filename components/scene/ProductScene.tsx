@@ -52,7 +52,7 @@ function Model({ product }: { product: Product }) {
   }
 }
 
-export default function ProductScene({ product, replay = 0, autoRotate = true, distance = 1 }: { product: Product; replay?: number; autoRotate?: boolean; distance?: number }) {
+export default function ProductScene({ product, replay = 0, autoRotate = true, distance = 1, paused = false }: { product: Product; replay?: number; autoRotate?: boolean; distance?: number; paused?: boolean }) {
   const base = framingFor(product);
   const f: Framing = {
     target: base.target,
@@ -61,8 +61,9 @@ export default function ProductScene({ product, replay = 0, autoRotate = true, d
   return (
     <Canvas
       key={product.id}
-      shadows
-      dpr={[1, 1.75]}
+      shadows="percentage"
+      frameloop={paused ? "never" : "always"}
+      dpr={[1, typeof window !== "undefined" && window.innerWidth < 768 ? 1.5 : 1.75]}
       camera={{ position: f.cam, fov: 32 }}
       gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
       style={{ touchAction: "pan-y" }}

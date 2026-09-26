@@ -30,6 +30,7 @@ export function ProductCard({ product, onOpen, index }: { product: Product; onOp
         type="button"
         onClick={onOpen}
         onPointerMove={(e) => {
+          if (e.pointerType !== "mouse") return; // en móvil/tablet sin inclinación
           const r = e.currentTarget.getBoundingClientRect();
           mx.set((e.clientX - r.left) / r.width - 0.5);
           my.set((e.clientY - r.top) / r.height - 0.5);
@@ -55,7 +56,7 @@ export function ProductCard({ product, onOpen, index }: { product: Product; onOp
           />
           {seasonal && (
             <span className="absolute left-3 top-3 rounded-full bg-[#2a1a12] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f5ede0]">
-              {product.season === "summer" ? "☀ Verano" : "☾ Invierno"}
+              {product.season === "summer" ? "☀ Verano" : "❄ Invierno"}
             </span>
           )}
           {product.tags?.includes("Favorito") && (

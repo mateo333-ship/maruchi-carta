@@ -1,15 +1,19 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 
 type Props = {
   value: string;
   onChange: (v: string) => void;
-  onFocusShortcut?: () => void;
   className?: string;
 };
 
 export const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar({ value, onChange, className }, ref) {
+  // ⌘K en Mac, Ctrl K en Windows/Linux
+  const [shortcut, setShortcut] = useState("Ctrl K");
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)) setShortcut("⌘ K");
+  }, []);
   return (
     <label className={`cir-search ${className ?? ""}`}>
       <svg className="cir-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -23,6 +27,14 @@ export const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
         placeholder="Busca matcha, burrata, zumo…"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            onChange("");
+            e.currentTarget.blur();
+          }
+        }}
+        enterKeyHint="search"
+        autoComplete="off"
         aria-label="Buscar en la carta"
       />
       {value ? (
@@ -30,8 +42,8 @@ export const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           Borrar
         </button>
       ) : (
-        <span className="cir-search__kbd" aria-hidden>
-          ⌘ K
+        <span className="cir-search__kbd cir-search__kbd--desktop" aria-hidden>
+          {shortcut}
         </span>
       )}
     </label>

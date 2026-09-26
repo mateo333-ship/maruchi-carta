@@ -113,6 +113,7 @@ body::before {
   font-size: 14px;
   color: var(--color-ink, #2a1a12);
 }
+.cir-search__field::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 .cir-search__field::placeholder {
   color: #a8927f;
 }
@@ -138,116 +139,130 @@ body::before {
     0 18px 36px -22px rgba(42, 26, 18, 0.3);
 }
 
-/* ───────────── Toggle verano / invierno (Uiverse · mobinkakei) ───────────── */
-.toggleWrapper {
+/* ───────────── Toggle verano / invierno ─────────────
+   Basado en el toggle de Uiverse (mobinkakei), rehecho con sol ☀ y copo ❄.
+   Todo se mide con variables, así la versión compacta no se descuadra. */
+.season-toggle {
   position: relative;
+  --w: 88px;
+  --h: 46px;
+  --pad: 4px;
+  --knob: calc(var(--h) - var(--pad) * 2);
   display: inline-flex;
   align-items: center;
-  padding: 0 64px;
-  color: var(--color-espresso);
-}
-.toggleWrapper .input {
-  position: absolute;
-  left: -99em;
-}
-.toggle {
-  cursor: pointer;
-  display: inline-block;
-  position: relative;
-  width: 90px;
-  height: 50px;
-  background-color: #83d8ff;
-  border-radius: 84px;
-  transition: background-color 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95);
-}
-.toggle:before {
-  content: "Verano";
-  position: absolute;
-  left: -64px;
-  top: 16px;
+  gap: 12px;
+  text-align: left;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--color-espresso);
-  transition: color 200ms;
+  -webkit-tap-highlight-color: transparent;
 }
-.toggle:after {
-  content: "Invierno";
-  position: absolute;
-  right: -66px;
-  top: 16px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #b3a08e;
-  transition: color 200ms;
-}
-.toggle__handler {
-  display: inline-block;
-  position: relative;
-  z-index: 1;
-  top: 3px;
-  left: 3px;
-  width: 44px;
-  height: 44px;
-  background-color: #ffcf96;
-  border-radius: 50px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  transition: all 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  transform: rotate(-45deg);
-}
-.toggle__handler .crater {
-  position: absolute;
-  background-color: #e8cda5;
-  opacity: 0;
-  transition: opacity 200ms ease-in-out;
-  border-radius: 100%;
-}
-.toggle__handler .crater--1 { top: 18px; left: 10px; width: 4px; height: 4px; }
-.toggle__handler .crater--2 { top: 28px; left: 22px; width: 6px; height: 6px; }
-.toggle__handler .crater--3 { top: 10px; left: 25px; width: 8px; height: 8px; }
-.star {
-  position: absolute;
-  background-color: #fff;
-  transition: all 300ms cubic-bezier(0.445, 0.05, 0.55, 0.95);
-  border-radius: 50%;
-}
-.star--1 { top: 10px; left: 35px; z-index: 0; width: 30px; height: 3px; }
-.star--2 { top: 18px; left: 28px; z-index: 1; width: 30px; height: 3px; }
-.star--3 { top: 27px; left: 40px; z-index: 0; width: 30px; height: 3px; }
-.star--4,
-.star--5,
-.star--6 {
-  opacity: 0;
-  transition: all 300ms 0s cubic-bezier(0.445, 0.05, 0.55, 0.95);
-}
-.star--4 { top: 16px; left: 11px; z-index: 0; width: 2px; height: 2px; transform: translate3d(3px, 0, 0); }
-.star--5 { top: 32px; left: 17px; z-index: 0; width: 3px; height: 3px; transform: translate3d(3px, 0, 0); }
-.star--6 { top: 36px; left: 28px; z-index: 0; width: 2px; height: 2px; transform: translate3d(3px, 0, 0); }
-.input:checked + .toggle { background-color: #749dd6; }
-.input:checked + .toggle:before { color: #b3a08e; }
-.input:checked + .toggle:after { color: var(--color-espresso); }
-.input:checked + .toggle .toggle__handler {
-  background-color: #ffe5b5;
-  transform: translate3d(40px, 0, 0) rotate(0);
-}
-.input:checked + .toggle .toggle__handler .crater { opacity: 1; }
-.input:checked + .toggle .star--1 { width: 2px; height: 2px; }
-.input:checked + .toggle .star--2 { width: 4px; height: 4px; transform: translate3d(-5px, 0, 0); }
-.input:checked + .toggle .star--3 { width: 2px; height: 2px; transform: translate3d(-7px, 0, 0); }
-.input:checked + .toggle .star--4,
-.input:checked + .toggle .star--5,
-.input:checked + .toggle .star--6 { opacity: 1; transform: translate3d(0, 0, 0); }
-.input:checked + .toggle .star--4 { transition: all 300ms 200ms cubic-bezier(0.445, 0.05, 0.55, 0.95); }
-.input:checked + .toggle .star--5 { transition: all 300ms 300ms cubic-bezier(0.445, 0.05, 0.55, 0.95); }
-.input:checked + .toggle .star--6 { transition: all 300ms 400ms cubic-bezier(0.445, 0.05, 0.55, 0.95); }
-.input:focus-visible + .toggle { outline: 2px solid var(--accent); outline-offset: 3px; }
+.season-toggle.is-compact { --w: 64px; --h: 36px; --pad: 3px; gap: 0; }
+.season-toggle .input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+.season-toggle__label { cursor: pointer; transition: color 250ms, opacity 250ms; user-select: none; }
+.season-toggle__label--off { opacity: 0.45; }
 
-/* versión compacta para la barra fija */
-.toggleWrapper.is-compact { padding: 0; width: 72px; height: 42px; flex-shrink: 0; justify-content: center; }
-.toggleWrapper.is-compact .toggle { transform: scale(0.78); transform-origin: center; }
-.toggleWrapper.is-compact .toggle:before,
-.toggleWrapper.is-compact .toggle:after { display: none; }
+.season-toggle .toggle {
+  position: relative;
+  flex-shrink: 0;
+  display: block;
+  width: var(--w);
+  height: var(--h);
+  border-radius: 999px;
+  overflow: hidden;
+  cursor: pointer;
+  background: linear-gradient(160deg, #7fd0ff 0%, #b6e6ff 100%);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background 400ms ease;
+}
+.season-toggle .toggle::before {
+  /* capa de invierno: se funde encima */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, #5d7fb8 0%, #a9c4e8 100%);
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+.season-toggle .toggle__handler {
+  position: absolute;
+  z-index: 2;
+  top: var(--pad);
+  left: var(--pad);
+  width: var(--knob);
+  height: var(--knob);
+  border-radius: 50%;
+  background: #ffc93c;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 0 4px rgba(255, 214, 90, 0.35);
+  transform: translateX(0) rotate(0deg);
+  transition: transform 500ms cubic-bezier(0.68, -0.4, 0.27, 1.4), background 300ms, box-shadow 300ms;
+}
+.season-toggle .toggle__icon {
+  position: absolute;
+  inset: 16%;
+  width: 68%;
+  height: 68%;
+  transition: opacity 250ms, transform 400ms;
+}
+.season-toggle .toggle__icon--sun { color: #d9780f; }
+.season-toggle .toggle__icon--snow { color: #5d86c4; opacity: 0; transform: rotate(-90deg) scale(0.6); }
+
+/* nubes (verano) */
+.season-toggle .cloud {
+  position: absolute;
+  z-index: 1;
+  height: 16%;
+  border-radius: 999px;
+  background: #fff;
+  opacity: 0.9;
+  transition: transform 400ms ease, opacity 300ms;
+}
+.season-toggle .cloud--1 { width: 34%; top: 26%; right: 12%; }
+.season-toggle .cloud--2 { width: 24%; top: 50%; right: 26%; opacity: 0.7; }
+.season-toggle .cloud--3 { width: 20%; top: 68%; right: 9%; opacity: 0.8; }
+
+/* nieve (invierno) */
+.season-toggle .flake {
+  position: absolute;
+  z-index: 1;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  top: -6px;
+}
+.season-toggle .flake--1 { left: 14%; }
+.season-toggle .flake--2 { left: 30%; width: 3px; height: 3px; }
+.season-toggle .flake--3 { left: 46%; }
+.season-toggle .flake--4 { left: 22%; width: 3px; height: 3px; }
+.season-toggle .flake--5 { left: 38%; width: 5px; height: 5px; }
+@keyframes snowfall {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(calc(var(--h) + 8px)); opacity: 0.2; }
+}
+
+/* estado invierno */
+.season-toggle .input:checked + .toggle::before { opacity: 1; }
+.season-toggle .input:checked + .toggle .toggle__handler {
+  transform: translateX(calc(var(--w) - var(--h))) rotate(360deg);
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25), 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+.season-toggle .input:checked + .toggle .toggle__icon--sun { opacity: 0; transform: rotate(90deg) scale(0.6); }
+.season-toggle .input:checked + .toggle .toggle__icon--snow { opacity: 1; transform: rotate(0) scale(1); }
+.season-toggle .input:checked + .toggle .cloud { transform: translateX(160%); opacity: 0; }
+.season-toggle .input:checked + .toggle .flake { animation: snowfall 2.2s linear infinite; }
+.season-toggle .input:checked + .toggle .flake--2 { animation-delay: 0.5s; animation-duration: 2.6s; }
+.season-toggle .input:checked + .toggle .flake--3 { animation-delay: 1s; }
+.season-toggle .input:checked + .toggle .flake--4 { animation-delay: 1.4s; animation-duration: 2.8s; }
+.season-toggle .input:checked + .toggle .flake--5 { animation-delay: 0.2s; animation-duration: 3s; }
+.season-toggle .input:focus-visible + .toggle { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* sobre fondo oscuro (footer) */
+.season-toggle.on-dark { color: #f5ede0; }
 
 /* ───────────── Tiempo (Uiverse · vinodjangid07) ───────────── */
 .cardContainer {
@@ -315,3 +330,21 @@ body::before {
   to { transform: translateX(-100%); }
 }
 .marquee { animation: marquee 32s linear infinite; }
+
+@media (max-width: 1023px) {
+  .cir-search__kbd--desktop { display: none; }
+}
+
+/* ───────────── Ajustes para móvil ───────────── */
+@media (max-width: 640px) {
+  .weather-card { width: 150px; height: 196px; padding: 14px 6px; border-radius: 16px; }
+  .weather-card .city { font-size: 0.72em; letter-spacing: 1px; }
+  .weather-card .temp { font-size: 2em; }
+  .weather-card svg { width: 36px; height: 36px; }
+  .min, .max { padding: 0 10px; }
+  .cardContainer::before { width: 80px; height: 80px; left: 70px; top: 30px; }
+  .section-anchor { scroll-margin-top: 80px; }
+}
+@media (hover: none) {
+  .cardContainer:hover::before { transform: none; }
+}

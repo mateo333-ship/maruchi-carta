@@ -114,7 +114,7 @@ function Segment({
   children,
 }: SegmentProps) {
   const marginLeft = useSpring(gap, SPRING);
-  const gradientId = `gooey-neck-${useId().replace(/:/g, "")}`;
+  const gradientId = `gooey-neck-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   useEffect(() => {
     if (reduced) marginLeft.jump(gap);
